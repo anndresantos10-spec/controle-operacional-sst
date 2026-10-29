@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const responsaveisPadrao = ['André', 'Carlos', 'Misael'];
+
   const [tarefas, setTarefas] = useState(() => {
     const saved = localStorage.getItem('salacontrol_tarefas');
     return saved ? JSON.parse(saved) : [
@@ -33,6 +35,7 @@ export default function App() {
         titulo: 'Calibrar aparelhos de medição da bancada',
         descricao: 'Aparelhos no armário B. Precisa de nota fiscal de remessa.',
         responsavel: '',
+        dataCriacao: '2026-10-25',
         data: '2026-10-28',
         status: 'AFAZER',
         atrasado: true
@@ -44,6 +47,7 @@ export default function App() {
         titulo: 'Comprar etiquetas para organização do estoque',
         descricao: 'Verificar com o financeiro antes de comprar.',
         responsavel: 'Carlos',
+        dataCriacao: '2026-10-26',
         data: '2026-10-31',
         status: 'ANDAMENTO',
         atrasado: false
@@ -54,7 +58,8 @@ export default function App() {
         prioridade: 'Baixa',
         titulo: 'Atualizar planilha de controle de presença da sala',
         descricao: 'Finalizado e arquivado.',
-        responsavel: 'Mariana',
+        responsavel: 'André',
+        dataCriacao: '2026-10-27',
         data: '2026-10-29',
         status: 'CONCLUIDO',
         atrasado: false
@@ -116,14 +121,15 @@ export default function App() {
     e.preventDefault();
     if (!novaTarefa.titulo) return;
 
+    const hoje = new Date().toISOString().split('T')[0];
+
     if (tarefaEmEdicao) {
-      // Atualizar tarefa existente
       setTarefas(tarefas.map(t => t.id === tarefaEmEdicao ? { ...t, ...novaTarefa } : t));
     } else {
-      // Criar nova tarefa
       const item = {
         ...novaTarefa,
         id: Date.now().toString(),
+        dataCriacao: hoje,
         status: 'AFAZER',
         atrasado: false
       };
@@ -152,6 +158,13 @@ export default function App() {
     }
   };
 
+  const formatarDataBR = (dataStr) => {
+    if (!dataStr) return '';
+    const partes = dataStr.split('-');
+    if (partes.length !== 3) return dataStr;
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  };
+
   const copiarWhatsApp = () => {
     let texto = `*Resumo da SalaControl - Acordos Internos*\n\n`;
     texto += `🚨 *Atrasadas:* ${tarefasAtrasadas}\n`;
@@ -160,12 +173,12 @@ export default function App() {
     
     texto += `*Avisos / A Fazer:*\n`;
     tarefas.filter(t => t.status === 'AFAZER').forEach(t => {
-      texto += `- ${t.titulo} (${t.responsavel || 'Sem dono'})\n`;
+      texto += `- ${t.titulo} (${t.responsavel || 'Sem dono'}) [Criado: ${formatarDataBR(t.dataCriacao)}]\n`;
     });
 
     texto += `\n*Em Andamento:*\n`;
     tarefas.filter(t => t.status === 'ANDAMENTO').forEach(t => {
-      texto += `- ${t.titulo} (${t.responsavel})\n`;
+      texto += `- ${t.titulo} (${t.responsavel}) [Criado: ${formatarDataBR(t.dataCriacao)}]\n`;
     });
 
     navigator.clipboard.writeText(texto);
@@ -185,7 +198,7 @@ export default function App() {
   const andamento = tarefasFiltradas.filter(t => t.status === 'ANDAMENTO');
   const concluido = tarefasFiltradas.filter(t => t.status === 'CONCLUIDO');
 
-  const responsaveisUnicos = Array.from(new Set(tarefas.map(t => t.responsavel).filter(Boolean)));
+  const todosResponsaveis = Array.from(new Set([...responsaveisPadrao, ...tarefas.map(t => t.responsavel).filter(Boolean)]));
   const categoriasUnicas = Array.from(new Set(tarefas.map(t => t.categoria)));
 
   return (
@@ -287,7 +300,7 @@ export default function App() {
           >
             <option value="TODOS">Todos os Responsáveis</option>
             <option value="SEM">Ninguém assumiu</option>
-            {responsaveisUnicos.map(r => <option key={r} value={r}>{r}</option>)}
+            {todosResponsaveis.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
 
           <select 
@@ -325,7 +338,7 @@ export default function App() {
             {afazer.map(item => (
               <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200/80 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                <div className="flex justify-between items-start gap-2 mb-2">
+                <div className="flex justify-between items-start gap-2 mb-1">
                   <span className="text-[11px] font-bold text-sky-700 uppercase tracking-tight">
                     {item.categoria}
                   </span>
@@ -334,15 +347,20 @@ export default function App() {
                   </span>
                 </div>
 
+                <div className="text-[10px] text-slate-400 font-medium mb-2">
+                  Criado em: {formatarDataBR(item.dataCriacao)}
+                </div>
+
                 <h3 className="font-bold text-sm text-slate-800 mb-1 leading-snug">{item.titulo}</h3>
                 <p className="text-xs text-slate-500 mb-3">{item.descricao}</p>
 
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="bg-amber-100/80 text-amber-800 text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1">
-                    <UserX className="w-3 h-3" /> NINGUÉM ASSUMIU
+                    {item.responsavel ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />} 
+                    {item.responsavel || 'NINGUÉM ASSUMIU'}
                   </span>
                   <span className="text-red-600 text-[11px] font-bold flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {item.data} (Atrasado)
+                    <Calendar className="w-3 h-3" /> {formatarDataBR(item.data)}
                   </span>
                 </div>
 
@@ -379,7 +397,7 @@ export default function App() {
           <div className="space-y-3">
             {andamento.map(item => (
               <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200/80">
-                <div className="flex justify-between items-start gap-2 mb-2">
+                <div className="flex justify-between items-start gap-2 mb-1">
                   <span className="text-[11px] font-bold text-sky-700 uppercase tracking-tight">
                     {item.categoria}
                   </span>
@@ -388,15 +406,19 @@ export default function App() {
                   </span>
                 </div>
 
+                <div className="text-[10px] text-slate-400 font-medium mb-2">
+                  Criado em: {formatarDataBR(item.dataCriacao)}
+                </div>
+
                 <h3 className="font-bold text-sm text-slate-800 mb-1 leading-snug">{item.titulo}</h3>
                 <p className="text-xs text-slate-500 mb-3">{item.descricao}</p>
 
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="bg-slate-100 text-slate-700 text-[11px] font-medium px-2.5 py-1 rounded-md flex items-center gap-1">
-                    <UserCheck className="w-3 h-3" /> {item.responsavel}
+                    <UserCheck className="w-3 h-3" /> {item.responsavel || 'Sem responsável'}
                   </span>
                   <span className="text-slate-500 text-[11px] font-medium flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {item.data}
+                    <Calendar className="w-3 h-3" /> {formatarDataBR(item.data)}
                   </span>
                 </div>
 
@@ -433,7 +455,7 @@ export default function App() {
           <div className="space-y-3">
             {concluido.map(item => (
               <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200/80">
-                <div className="flex justify-between items-start gap-2 mb-2">
+                <div className="flex justify-between items-start gap-2 mb-1">
                   <span className="text-[11px] font-bold text-sky-700 uppercase tracking-tight">
                     {item.categoria}
                   </span>
@@ -442,15 +464,19 @@ export default function App() {
                   </span>
                 </div>
 
+                <div className="text-[10px] text-slate-400 font-medium mb-2">
+                  Criado em: {formatarDataBR(item.dataCriacao)}
+                </div>
+
                 <h3 className="font-bold text-sm text-slate-800 mb-1 leading-snug">{item.titulo}</h3>
                 <p className="text-xs text-slate-500 mb-3">{item.descricao}</p>
 
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="bg-slate-100 text-slate-700 text-[11px] font-medium px-2.5 py-1 rounded-md flex items-center gap-1">
-                    <UserCheck className="w-3 h-3" /> {item.responsavel}
+                    <UserCheck className="w-3 h-3" /> {item.responsavel || 'Sem responsável'}
                   </span>
                   <span className="text-slate-500 text-[11px] font-medium flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {item.data}
+                    <Calendar className="w-3 h-3" /> {formatarDataBR(item.data)}
                   </span>
                 </div>
 
@@ -521,13 +547,16 @@ export default function App() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Responsável</label>
-                <input 
-                  type="text"
+                <select 
                   value={novaTarefa.responsavel}
                   onChange={e => setNovaTarefa({...novaTarefa, responsavel: e.target.value})}
-                  placeholder="Deixe em branco se ninguém assumiu"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                />
+                >
+                  <option value="">Selecione o responsável (ou deixe sem)</option>
+                  {responsaveisPadrao.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
