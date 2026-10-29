@@ -66,6 +66,7 @@ export default function App() {
   const [filtroResponsavel, setFiltroResponsavel] = useState('TODOS');
   const [filtroCategoria, setFiltroCategoria] = useState('TODAS');
   const [modalAberto, setModalAberto] = useState(false);
+  const [tarefaEmEdicao, setTarefaEmEdicao] = useState(null);
 
   const [novaTarefa, setNovaTarefa] = useState({
     categoria: 'MANUTENÇÃO/CALIBRAÇÃO',
@@ -85,19 +86,52 @@ export default function App() {
   const urgentes = tarefas.filter(t => (t.prioridade === 'URGENTE' || t.prioridade === 'Alta') && t.status !== 'CONCLUIDO').length;
   const emAndamento = tarefas.filter(t => t.status === 'ANDAMENTO').length;
 
+  const abrirModalNovo = () => {
+    setTarefaEmEdicao(null);
+    setNovaTarefa({
+      categoria: 'MANUTENÇÃO/CALIBRAÇÃO',
+      prioridade: 'Média',
+      titulo: '',
+      descricao: '',
+      responsavel: '',
+      data: ''
+    });
+    setModalAberto(true);
+  };
+
+  const abrirModalEdicao = (tarefa) => {
+    setTarefaEmEdicao(tarefa.id);
+    setNovaTarefa({
+      categoria: tarefa.categoria,
+      prioridade: tarefa.prioridade,
+      titulo: tarefa.titulo,
+      descricao: tarefa.descricao,
+      responsavel: tarefa.responsavel,
+      data: tarefa.data
+    });
+    setModalAberto(true);
+  };
+
   const handleSalvar = (e) => {
     e.preventDefault();
     if (!novaTarefa.titulo) return;
 
-    const item = {
-      ...novaTarefa,
-      id: Date.now().toString(),
-      status: 'AFAZER',
-      atrasado: false
-    };
+    if (tarefaEmEdicao) {
+      // Atualizar tarefa existente
+      setTarefas(tarefas.map(t => t.id === tarefaEmEdicao ? { ...t, ...novaTarefa } : t));
+    } else {
+      // Criar nova tarefa
+      const item = {
+        ...novaTarefa,
+        id: Date.now().toString(),
+        status: 'AFAZER',
+        atrasado: false
+      };
+      setTarefas([...tarefas, item]);
+    }
 
-    setTarefas([...tarefas, item]);
     setModalAberto(false);
+    setTarefaEmEdicao(null);
     setNovaTarefa({
       categoria: 'MANUTENÇÃO/CALIBRAÇÃO',
       prioridade: 'Média',
@@ -178,7 +212,7 @@ export default function App() {
             <Share2 className="w-4 h-4" /> Copiar p/ WhatsApp
           </button>
           <button 
-            onClick={() => setModalAberto(true)}
+            onClick={abrirModalNovo}
             className="bg-[#0284c7] hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition shadow-sm"
           >
             <Plus className="w-4 h-4" /> Novo Recado / Tarefa
@@ -322,8 +356,8 @@ export default function App() {
                     </button>
                   </div>
                   <div className="flex gap-2">
-                    <button className="hover:text-slate-600"><Pencil className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => removerTarefa(item.id)} className="hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => abrirModalEdicao(item)} className="hover:text-slate-600" title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => removerTarefa(item.id)} className="hover:text-red-500" title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -376,8 +410,8 @@ export default function App() {
                     </button>
                   </div>
                   <div className="flex gap-2">
-                    <button className="hover:text-slate-600"><Pencil className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => removerTarefa(item.id)} className="hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => abrirModalEdicao(item)} className="hover:text-slate-600" title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => removerTarefa(item.id)} className="hover:text-red-500" title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -430,8 +464,8 @@ export default function App() {
                     </button>
                   </div>
                   <div className="flex gap-2">
-                    <button className="hover:text-slate-600"><Pencil className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => removerTarefa(item.id)} className="hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => abrirModalEdicao(item)} className="hover:text-slate-600" title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => removerTarefa(item.id)} className="hover:text-red-500" title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -443,7 +477,9 @@ export default function App() {
       {modalAberto && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Novo Recado / Tarefa</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              {tarefaEmEdicao ? 'Editar Recado / Tarefa' : 'Novo Recado / Tarefa'}
+            </h3>
             <form onSubmit={handleSalvar} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Título</label>
